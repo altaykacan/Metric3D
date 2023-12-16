@@ -5,17 +5,32 @@ import cv2
 
 
 def get_pcd_base(H, W, u0, v0, fx, fy):
+    """
+    Calculate the base point cloud coordinates for a given camera intrinsic parameters.
+
+    Args:
+        H (int): Height of the image.
+        W (int): Width of the image.
+        u0 (float): Principal point x-coordinate.
+        v0 (float): Principal point y-coordinate.
+        fx (float): Focal length in the x-direction.
+        fy (float): Focal length in the y-direction.
+
+    Returns:
+        np.ndarray: Array of shape (H, W, 3) representing the base point cloud coordinates.
+                   Each element in the array is a 3D point (x, y, z) in camera coordinates.
+    """
     x_row = np.arange(0, W)
     x = np.tile(x_row, (H, 1))
-    x = x.astype(np.float32)
-    u_m_u0 = x - u0
+    x = x.astype(np.float32) # image plane coordinates for the width direction
+    u_m_u0 = x - u0 # Center the coordinates to the camera principal point in the camera coordinate frame
 
     y_col = np.arange(0, H)  # y_col = np.arange(0, height)
-    y = np.tile(y_col, (W, 1)).T
-    y = y.astype(np.float32)
-    v_m_v0 = y - v0
+    y = np.tile(y_col, (W, 1)).T # Transpose to make work as the columns
+    y = y.astype(np.float32) # image plane coordinates for the height direction
+    v_m_v0 = y - v0 # Center the coordinates to the camera principal point
 
-    x = u_m_u0 / fx
+    x = u_m_u0 / fx # revert the scaling from the standard image plane with f=1 to the actual camera image plane
     y = v_m_v0 / fy
     z = np.ones_like(x)
     pw = np.stack([x, y, z], axis=2)  # [h, w, c]
@@ -23,6 +38,22 @@ def get_pcd_base(H, W, u0, v0, fx, fy):
 
 
 def reconstruct_pcd(depth, fx, fy, u0, v0, pcd_base=None, mask=None):
+    """
+    Reconstructs a point cloud from a depth map.
+
+    Args:
+        depth (numpy.ndarray or torch.Tensor): The depth map.
+        fx (float): The focal length in the x-direction.
+        fy (float): The focal length in the y-direction.
+        u0 (float): The x-coordinate of the principal point.
+        v0 (float): The y-coordinate of the principal point.
+        pcd_base (numpy.ndarray, optional): The base point cloud. If not provided, it will be computed internally.
+        mask (numpy.ndarray, optional): A mask indicating which points to exclude from the point cloud.
+
+    Returns:
+        numpy.ndarray: The reconstructed point cloud.
+
+    """
     if type(depth) == torch.__name__:
         depth = depth.cpu().numpy().squeeze()
     depth = cv2.medianBlur(depth, 5)

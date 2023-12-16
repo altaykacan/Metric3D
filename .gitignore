@@ -2,3 +2,10 @@ work_dirs
 show_dirs
 *__pycache__*
 test_dataloader_*
+
+weight/*
+.vscode
+
+# Don't share data :)
+data/wild_demo/*
+deepscenario/data/*

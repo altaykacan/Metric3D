@@ -41,44 +41,45 @@ def parse_args():
     return args
 
 def main(args):
+    # Config is a class from mmengine: https://github.com/open-mmlab/mmengine/blob/main/mmengine/config/config.py
     os.chdir(CODE_SPACE)
     cfg = Config.fromfile(args.config)
-    
+
     if args.options is not None:
         cfg.merge_from_dict(args.options)
-        
+
     # show_dir is determined in this priority: CLI > segment in file > filename
     if args.show_dir is not None:
         # update configs according to CLI args if args.show_dir is not None
         cfg.show_dir = args.show_dir
     else:
         # use condig filename + timestamp as default show_dir if args.show_dir is None
-        cfg.show_dir = osp.join('./show_dirs', 
+        cfg.show_dir = osp.join('./show_dirs',
                                 osp.splitext(osp.basename(args.config))[0],
                                 args.timestamp)
-    
+
     # ckpt path
     if args.load_from is None:
         raise RuntimeError('Please set model path!')
     cfg.load_from = args.load_from
-    
+
     # load data info
     data_info = {}
     load_data_info('data_info', data_info=data_info)
     cfg.mldb_info = data_info
     # update check point info
     reset_ckpt_path(cfg.model, data_info)
-    
+
     # create show dir
     os.makedirs(osp.abspath(cfg.show_dir), exist_ok=True)
-    
+
     # init the logger before other steps
     cfg.log_file = osp.join(cfg.show_dir, f'{args.timestamp}.log')
     logger = setup_logger(cfg.log_file)
-    
+
     # log some basic info
     logger.info(f'Config:\n{cfg.pretty_text}')
-    
+
     # init distributed env dirst, since logger depends on the dist info
     if args.launcher == 'None':
         cfg.distributed = False
@@ -86,8 +87,8 @@ def main(args):
         cfg.distributed = True
         init_env(args.launcher, cfg)
     logger.info(f'Distributed training: {cfg.distributed}')
-    
-    # dump config 
+
+    # dump config
     cfg.dump(osp.join(cfg.show_dir, osp.basename(args.config)))
     test_data_path = args.test_data_path
     if not os.path.isabs(test_data_path):
@@ -97,7 +98,7 @@ def main(args):
         test_data = load_from_annos(test_data_path)
     else:
         test_data = load_data(args.test_data_path)
-    
+
     if not cfg.distributed:
         main_worker(0, cfg, args.launcher, test_data)
     else:
@@ -107,7 +108,7 @@ def main(args):
             main_worker(local_rank, cfg, args.launcher, test_data)
         else:
             mp.spawn(main_worker, nprocs=cfg.dist_params.num_gpus_per_node, args=(cfg, args.launcher, test_data))
-        
+
 def main_worker(local_rank: int, cfg: dict, launcher: str, test_data: list):
     if cfg.distributed:
         cfg.dist_params.global_rank = cfg.dist_params.node_rank * cfg.dist_params.num_gpus_per_node + local_rank
@@ -124,11 +125,11 @@ def main_worker(local_rank: int, cfg: dict, launcher: str, test_data: list):
                 world_size=cfg.dist_params.world_size,
                 rank=cfg.dist_params.global_rank,
                 timeout=default_timeout)
-    
+
     logger = setup_logger(cfg.log_file)
     # build model
     model = get_configured_monodepth_model(cfg, )
-    
+
     # config distributed training
     if cfg.distributed:
         model = torch.nn.parallel.DistributedDataParallel(model.cuda(),
@@ -136,23 +137,23 @@ def main_worker(local_rank: int, cfg: dict, launcher: str, test_data: list):
                                                           output_device=local_rank,
                                                           find_unused_parameters=True)
     else:
-        model = torch.nn.DataParallel(model).cuda()
-        
+        model = torch.nn.DataParallel(model).cuda() # DataParallel expects a module as input. Our previous model object now becomes the module attribute of the new DataParallel object
+
     # load ckpt
     model, _,  _, _ = load_ckpt(cfg.load_from, model, strict_match=False)
     model.eval()
-    
+
     do_scalecano_test_with_custom_data(
-        model, 
+        model,
         cfg,
         test_data,
         logger,
         cfg.distributed,
         local_rank
     )
-    
+
 if __name__ == '__main__':
     args = parse_args()
     timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
     args.timestamp = timestamp
-    main(args)    
+    main(args)
