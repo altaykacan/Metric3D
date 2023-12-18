@@ -164,14 +164,14 @@ def get_prediction_custom(
     pred_depth = pred_depth[pad_info[0] : pred_depth.shape[0] - pad_info[1], pad_info[2] : pred_depth.shape[1] - pad_info[3]]
     if gt_depth is not None:
         resize_shape = gt_depth.shape
-    elif ori_shape != []:
-        resize_shape = ori_shape
     elif H_output != -1 and W_output != -1:
         resize_shape = [H_output, W_output]
+    elif ori_shape != []:
+        resize_shape = ori_shape
     else:
         resize_shape = pred_depth.shape
 
-    pred_depth = torch.nn.functional.interpolate(pred_depth[None, None, :, :], resize_shape, mode='bilinear').squeeze() # to original size
+    pred_depth = torch.nn.functional.interpolate(pred_depth[None, None, :, :], resize_shape, mode='bilinear').squeeze() # to desired size
     pred_depth = pred_depth * normalize_scale / scale_info
     if gt_depth is not None:
         pred_depth_scale, scale = align_scale(pred_depth, gt_depth)

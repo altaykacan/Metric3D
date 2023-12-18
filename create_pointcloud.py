@@ -37,8 +37,10 @@ def main():
     start = 0 # index of the starting image
     end = 4 # index of the last image, set None to include all images from start
 
-    H_output = 747 # 1/4th of our custom data
+    H_output = 747 # 1/4th of our custom data, keeping the aspect ratio the same
     W_output = 1328
+
+
 
     # Construct the Config object for metric3d
     cfg = Config.fromfile(config_path)
@@ -89,7 +91,9 @@ def main():
 
     print(f"Creating point cloud from {len(image_data)} images using every {use_every_nth}th image...")
 
-    # Resize the input images and adjust intrinsics
+    # Standardization values used by the authors, useful to just save image nicely
+    mean = torch.tensor([123.675, 116.28, 103.53]).float()[:, None, None]
+    std = torch.tensor([58.395, 57.12, 57.375]).float()[:, None, None]
 
     # Create a dictionary of lists of np arrays to keep track of the 3D point
     # cloud coordinates (pcd) and colors (rgb), both are (num_points, 3) arrays
@@ -115,13 +119,15 @@ def main():
     for i, (current_image_data, current_trajectory) in tqdm(enumerate(zip(image_data, trajectories))):
         if i % use_every_nth == 0:
             # Read in image and intrinsics from image_data
-            rgb_origin = cv2.imread(current_image_data["rgb"])[:,:,::-1].copy()
+            # rgb_origin = cv2.imread(current_image_data["rgb"])[:,:,::-1].copy()
+            rgb_origin = cv2.imread(current_image_data["rgb"]).copy() # preprocess step already has color space transformation
+
             intrinsics = current_image_data["intrinsic"]
 
             # Preprocess input for model and get prediction
             rgb_input, cam_models_stacks, pad, label_scale_factor = transform_test_data_scalecano(rgb_origin, intrinsics, cfg.data_basic)
 
-            pred_depth, pred_depth_scale, scale = get_prediction_custom(
+            pred_depth, _, _ = get_prediction_custom(
                 model = model,
                 input = rgb_input,
                 cam_model = cam_models_stacks,
@@ -129,11 +135,10 @@ def main():
                 scale_info = label_scale_factor,
                 gt_depth = None,
                 normalize_scale = normalize_scale,
-                H_out =
-                W_out =
+                H_output = H_output,
+                W_output = W_output,
             )
 
-            print("DEBUG: Done with one iteration!")
             # Compute mask to decide which points to show or not
 
             # Create point cloud from depth map (in camera coordinates)
@@ -141,6 +146,21 @@ def main():
             # Transform point cloud to world coordinates
 
             # Save original image, depth prediction
+            image_to_save = rgb_input.squeeze().cpu()
+            image_to_save = image_to_save * std + mean
+            image_to_save = image_to_save.permute(1,2,0).numpy().astype(int)
+            plt.imsave(
+                Path(save_image_dir, current_image_data["filename"]),
+                image_to_save
+            )
+
+            plt.imsave(
+                Path(save_pred_dir, current_image_data["filename"]),
+                # TODO, add the depth here
+            )
+
+            print("DEBUG: done with one iteration!")
+
 
     # Save the reconstructed point cloud
 
