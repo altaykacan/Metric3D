@@ -1,5 +1,5 @@
 # 🎓Master's Thesis Project Repo - Metric3D
-Modifying the repository to support zero-shot point cloud reconstruction when given camera settings and a trajectory from a SLAM system in the flavor of [MonoRec](https://github.com/Brummi/MonoRec) as a part of my Thesis :)
+Modifying the repository to support zero-shot point cloud reconstruction when given camera settings and a trajectory from a SLAM system in the flavor of [MonoRec](https://github.com/Brummi/MonoRec) as a part of my thesis :)
 
 
 # 🚀 MetricDepth (ICCV23) 🚀
