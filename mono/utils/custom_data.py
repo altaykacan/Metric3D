@@ -2,6 +2,7 @@ import glob
 import os
 import json
 import cv2
+from typing import List, Dict
 
 def load_from_annos(anno_path):
     with open(anno_path, 'r') as f:
@@ -41,7 +42,7 @@ def load_data(path: str):
               - 'folder': The folder name containing the image file.
     """
     rgbs = glob.glob(path + '/*.jpg') + glob.glob(path + '/*.png')
-    rgbs = sorted(rgbs)
+    rgbs = sorted(rgbs) # hacky solution to get file names, glob doesn't sort on it's own
     data = [{'rgb':i, 'depth':None,
              'intrinsic': [2779.9523856929486, 2779.9523856929486,  2655.5, 1493.5],
              'filename':os.path.basename(i), 'folder': i.split('/')[-3]} for i in rgbs]
