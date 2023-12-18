@@ -64,7 +64,7 @@ def align_scale_shift_numpy(pred: np.array, target: np.array):
 
 def build_camera_model(H : int, W : int, intrinsics : list) -> np.array:
     """
-    Encode the camera intrinsic parameters (focal length and principle point) to a 4-channel map. 
+    Encode the camera intrinsic parameters (focal length and principle point) to a 4-channel map.
     """
     fx, fy, u0, v0 = intrinsics
     f = (fx + fy) / 2.0
@@ -73,7 +73,7 @@ def build_camera_model(H : int, W : int, intrinsics : list) -> np.array:
     x_row_center_norm = (x_row - u0) / W
     x_center = np.tile(x_row_center_norm, (H, 1)) # [H, W]
 
-    y_col = np.arange(0, H).astype(np.float32) 
+    y_col = np.arange(0, H).astype(np.float32)
     y_col_center_norm = (y_col - v0) / H
     y_center = np.tile(y_col_center_norm, (W, 1)).T # [H, W]
 
@@ -110,32 +110,76 @@ def resize_for_input(image, output_shape, intrinsic, canonical_shape, to_canonic
     image = cv2.resize(image, dsize=(reshape_w, reshape_h), interpolation=cv2.INTER_LINEAR)
     # padding
     image = cv2.copyMakeBorder(
-        image, 
-        pad_h_half, 
-        pad_h - pad_h_half, 
-        pad_w_half, 
-        pad_w - pad_w_half, 
-        cv2.BORDER_CONSTANT, 
+        image,
+        pad_h_half,
+        pad_h - pad_h_half,
+        pad_w_half,
+        pad_w - pad_w_half,
+        cv2.BORDER_CONSTANT,
         value=padding)
-    
+
     # Resize, adjust principle point
     intrinsic[2] = intrinsic[2] * to_scale_ratio
     intrinsic[3] = intrinsic[3] * to_scale_ratio
 
     cam_model = build_camera_model(reshape_h, reshape_w, intrinsic)
     cam_model = cv2.copyMakeBorder(
-        cam_model, 
-        pad_h_half, 
-        pad_h - pad_h_half, 
-        pad_w_half, 
-        pad_w - pad_w_half, 
-        cv2.BORDER_CONSTANT, 
+        cam_model,
+        pad_h_half,
+        pad_h - pad_h_half,
+        pad_w_half,
+        pad_w - pad_w_half,
+        cv2.BORDER_CONSTANT,
         value=-1)
 
     pad=[pad_h_half, pad_h - pad_h_half, pad_w_half, pad_w - pad_w_half]
     label_scale_factor=1/to_scale_ratio
     return image, cam_model, pad, label_scale_factor
 
+def get_prediction_custom(
+    model: torch.nn.Module,
+    input: torch.tensor,
+    cam_model: torch.tensor,
+    pad_info: torch.tensor,
+    scale_info: torch.tensor,
+    gt_depth: torch.tensor,
+    normalize_scale: float,
+    H_output: int = -1,
+    W_output: int = -1,
+    ori_shape: list=[],
+):
+    """
+    Default get_prediction method modified to give a predefined output scale
+    such that it is easier to adjust how dense the point cloud construction
+    is. The repo already has custom resizing/intrinsic adjustment for inference
+    but the output is resized again to the original size.
+    """
+
+    data = dict(
+        input=input,
+        cam_model=cam_model,
+    )
+    pred_depth, confidence, output_dict = model.module.inference(data)
+    pred_depth = pred_depth.squeeze()
+    pred_depth = pred_depth[pad_info[0] : pred_depth.shape[0] - pad_info[1], pad_info[2] : pred_depth.shape[1] - pad_info[3]]
+    if gt_depth is not None:
+        resize_shape = gt_depth.shape
+    elif ori_shape != []:
+        resize_shape = ori_shape
+    elif H_output != -1 and W_output != -1:
+        resize_shape = [H_output, W_output]
+    else:
+        resize_shape = pred_depth.shape
+
+    pred_depth = torch.nn.functional.interpolate(pred_depth[None, None, :, :], resize_shape, mode='bilinear').squeeze() # to original size
+    pred_depth = pred_depth * normalize_scale / scale_info
+    if gt_depth is not None:
+        pred_depth_scale, scale = align_scale(pred_depth, gt_depth)
+    else:
+        pred_depth_scale = None
+        scale = None
+
+    return pred_depth, pred_depth_scale, scale
 
 def get_prediction(
     model: torch.nn.Module,
@@ -210,7 +254,7 @@ def transform_test_data_scalecano(rgb, intrinsic, data_basic):
     rgb = torch.from_numpy(rgb.transpose((2, 0, 1))).float()
     rgb = torch.div((rgb - mean), std)
     rgb = rgb[None, :, :, :].cuda()
-    
+
     cam_model = torch.from_numpy(cam_model.transpose((2, 0, 1))).float()
     cam_model = cam_model[None, :, :, :].cuda()
     cam_model_stacks = [
@@ -239,7 +283,7 @@ def do_scalecano_test_with_custom_data(
     dam = MetricAverageMeter(['abs_rel', 'rmse', 'silog', 'delta1', 'delta2', 'delta3'])
     dam_median = MetricAverageMeter(['abs_rel', 'rmse', 'silog', 'delta1', 'delta2', 'delta3'])
     dam_global = MetricAverageMeter(['abs_rel', 'rmse', 'silog', 'delta1', 'delta2', 'delta3'])
-    
+
     for i, an in tqdm(enumerate(test_data)):
         rgb_origin = cv2.imread(an['rgb'])[:, :, ::-1].copy()
         if an['depth'] is not None:
@@ -273,12 +317,12 @@ def do_scalecano_test_with_custom_data(
 
             pred_depth_median = pred_depth * gt_depth[gt_depth != 0].median() / pred_depth[gt_depth != 0].median()
             pred_global, _ = align_scale_shift(pred_depth, gt_depth)
-            
+
             mask = (gt_depth > 1e-8)
             dam.update_metrics_gpu(pred_depth, gt_depth, mask, is_distributed)
             dam_median.update_metrics_gpu(pred_depth_median, gt_depth, mask, is_distributed)
             dam_global.update_metrics_gpu(pred_global, gt_depth, mask, is_distributed)
-        
+
         if i % save_interval == 0:
             os.makedirs(osp.join(save_imgs_dir, an['folder']), exist_ok=True)
             rgb_torch = torch.from_numpy(rgb_origin).to(pred_depth.device).permute(2, 0, 1)
@@ -299,7 +343,7 @@ def do_scalecano_test_with_custom_data(
             pred_depth = pred_depth.detach().cpu().numpy()
             pcd = reconstruct_pcd(pred_depth, intrinsic[0], intrinsic[1], intrinsic[2], intrinsic[3])
             os.makedirs(osp.join(save_pcd_dir, an['folder']), exist_ok=True)
-            
+
             if an['intrinsic'] != None:
                 save_point_cloud(pcd.reshape((-1, 3)), rgb_origin.reshape(-1, 3), osp.join(save_pcd_dir, an['folder'], an['filename'][:-4]+'.ply'))
             else:
@@ -312,7 +356,7 @@ def do_scalecano_test_with_custom_data(
                         pcd = reconstruct_pcd(pred_depth, f_scale * r, f_scale * (2 - r), intrinsic[2], intrinsic[3])
                         fstr = '_fx_' + str(int(f_scale * r)) + '_fy_' + str(int(f_scale * (2-r)))
                         save_point_cloud(pcd.reshape((-1, 3)), rgb_origin.reshape(-1, 3), osp.join(save_pcd_dir, an['folder'], an['filename'][:-4]+fstr+'.ply'))
-    
+
     if gt_depth_flag:
         eval_error = dam.get_metrics()
         print('w/o match :', eval_error)
