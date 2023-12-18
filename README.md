@@ -1,6 +1,8 @@
-# 🚀 MetricDepth (ICCV23) 🚀
+# 🎓Master's Thesis Project Repo - Metric3D
+Modifying the repository to support zero-shot point cloud reconstruction when given camera settings and a trajectory from a SLAM system in the flavor of [MonoRec](https://github.com/Brummi/MonoRec) as a part of my Thesis :)
 
-**The is official PyTorch implementation of paper "Metric3D: Towards Zero-shot Metric 3D Prediction from A Single Image" (Metric 3D)**
+
+# 🚀 MetricDepth (ICCV23) 🚀
 
 Authors: [Wei Yin](https://yvanyin.net/)<sup>1*</sup>,
 [Chi Zhang](https://icoz69.github.io/)<sup>2*</sup>,
