@@ -26,8 +26,22 @@ def load_from_annos(anno_path):
     return datas
 
 def load_data(path: str):
+    """
+    Load custom data from the specified path.
+
+    Args:
+        path (str): The path to the directory containing the data.
+
+    Returns:
+        list: A list of dictionaries representing the loaded data.
+              Each dictionary contains the following keys:
+              - 'rgb': The path to the RGB image file.
+              - 'intrinsic': The intrinsic parameters of the camera in the format [fx, fy, cx, cy].
+              - 'filename': The filename of the image file.
+              - 'folder': The folder name containing the image file.
+    """
     rgbs = glob.glob(path + '/*.jpg') + glob.glob(path + '/*.png')
-    # For custom data: "Set the 'intrinsic' with the format [fx, fy, cx, cy]."
+    rgbs = sorted(rgbs)
     data = [{'rgb':i, 'depth':None,
              'intrinsic': [2779.9523856929486, 2779.9523856929486,  2655.5, 1493.5],
              'filename':os.path.basename(i), 'folder': i.split('/')[-3]} for i in rgbs]
