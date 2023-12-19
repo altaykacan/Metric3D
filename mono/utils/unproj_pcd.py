@@ -1,7 +1,10 @@
 import numpy as np
+import typing
 import torch
 from plyfile import PlyData, PlyElement
 import cv2
+
+from typing import Union
 
 
 def get_pcd_base(H, W, u0, v0, fx, fy):
@@ -33,16 +36,16 @@ def get_pcd_base(H, W, u0, v0, fx, fy):
     x = u_m_u0 / fx # revert the scaling from the standard image plane with f=1 to the actual camera image plane
     y = v_m_v0 / fy
     z = np.ones_like(x)
-    pw = np.stack([x, y, z], axis=2)  # [h, w, c]
+    pw = np.stack([x, y, z], axis=2)  # [H, W, c], c is the number of coords which is usually 3
     return pw
 
 
 def reconstruct_pcd(depth, fx, fy, u0, v0, pcd_base=None, mask=None):
     """
-    Reconstructs a point cloud from a depth map.
+    Reconstructs a point cloud from a single depth map.
 
     Args:
-        depth (numpy.ndarray or torch.Tensor): The depth map.
+        depth (numpy.ndarray or torch.Tensor): The depth map with shape (H,W)
         fx (float): The focal length in the x-direction.
         fy (float): The focal length in the y-direction.
         u0 (float): The x-coordinate of the principal point.
@@ -117,3 +120,69 @@ def save_point_cloud(pcd, rgb, filename, binary=True):
                     'end_header' % r.shape[0]
         # ---- Save ply data to disk
         np.savetxt(filename, np.column_stack[x, y, z, r, g, b], fmt='%f %f %f %d %d %d', header=ply_head, comments='')
+
+
+def transform_pcd_to_world(pcd:  np.ndarray, extrinsics: np.ndarray, scale_factor: float=1.0):
+    """
+    Helper function to transform a given 3d point cloud from camera coordinates to
+    world coordinates.
+
+    The transform is done by flattening the point cloud to be of shape
+    [num_points, 3] adding and extra dimension with 1 for homogenous coordinates,
+    transposing the matrix and multiplying with the extrinsic transformation
+    matrix. The flattened point cloud without the extra dimension is returned.
+
+    Args:
+        pcd (np.ndarray): The point cloud in camera coordinates
+        with shape [H,W,3] where the last dimension stores the x-y-z coordinates
+
+        extrinsics (np.ndarray): The extrinsic matrix, 4x4
+        homogeneous transform to convert camera coordinates to world coordinates
+
+        scale_factor (float): The factor to multiply the translation components
+        of the extrinsic matrix, used to counter the scale ambiguity of monocular
+        trajectory estimation methods.
+
+    Returns:
+        transformed_pcd (np.ndarray): Flattened and transformed
+        point cloud, has shape [num_points,3]
+    """
+    pcd = pcd.reshape(-1, 3)
+    row_of_ones = np.ones((pcd.shape[0], 1)) # shape is [num_points, 1]
+    pcd = np.concatenate((pcd, row_of_ones), axis=1)
+
+    extrinsics[:3,3] = scale_factor * extrinsics[:3,3]
+
+    pcd_transformed = extrinsics @ pcd.T # [4,4] @ [4, num_points]
+    pcd_transformed = pcd_transformed.T
+    pcd_transformed = pcd_transformed[:, :3] # [num_points, 3]
+
+    return pcd_transformed
+
+def compute_mask(depth: np.ndarray, roi: typing.List, min_d: float, max_d: float, dropout: float=0):
+    """
+    Helper function to compute mask to decide which points to include in the
+    main point cloud.
+
+    Args:
+        depth (np.ndarray): The depth map.
+        roi (List): The region of interest [top, bottom, left, right].
+        min_d (float): The minimum depth value to include in the mask.
+        max_d (float): The maximum depth value to include in the mask.
+        dropout (float, optional): The dropout probability to randomly exclude points from the mask.
+
+    Returns:
+        torch.Tensor: The computed mask as a flattened array.
+    """
+    mask = (depth > min_d) & (depth < max_d)
+    if roi != []:
+        mask[:roi[0], :] = False
+        mask[roi[1]:, :] = False
+        mask[:, roi[2]] = False
+        mask[:, roi[3]:] = False
+    if dropout > 0:
+        mask = mask & (np.random.rand(*depth.shape) > dropout) # need to unpack shape which is a tuple
+
+    mask = mask.reshape(-1)
+
+    return mask

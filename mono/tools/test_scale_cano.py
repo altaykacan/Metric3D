@@ -53,7 +53,7 @@ def main(args):
         # update configs according to CLI args if args.show_dir is not None
         cfg.show_dir = args.show_dir
     else:
-        # use condig filename + timestamp as default show_dir if args.show_dir is None
+        # use config filename + timestamp as default show_dir if args.show_dir is None
         cfg.show_dir = osp.join('./show_dirs',
                                 osp.splitext(osp.basename(args.config))[0],
                                 args.timestamp)
