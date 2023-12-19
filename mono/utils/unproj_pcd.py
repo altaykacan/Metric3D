@@ -4,6 +4,7 @@ import torch
 from plyfile import PlyData, PlyElement
 import cv2
 
+from tqdm import tqdm
 from typing import Union
 
 
@@ -89,7 +90,7 @@ def save_point_cloud(pcd, rgb, filename, binary=True):
     if binary is True:
         # Format into Numpy structured array
         vertices = []
-        for row_idx in range(points_3d.shape[0]):
+        for row_idx in tqdm(range(points_3d.shape[0])):
             cur_point = points_3d[row_idx]
             vertices.append(
                 tuple(

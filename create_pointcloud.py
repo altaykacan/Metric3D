@@ -25,7 +25,7 @@ except:
 
 def main():
     # Set configuration variables
-    file_name = "test.ply"
+    file_name = "test_original_version.ply"
 
     weigth_path = Path("./weight/convlarge_hourglass_0.3_150_step750k_v1.1.pth")
     trajectory_path = Path("/usr/stud/kaa/thesis/data_temp/deep_scenario/poses_dvso/01.txt")
@@ -33,25 +33,25 @@ def main():
     # Input image resizing (called crop) defined in the config file
     config_path = Path("./mono/configs/HourglassDecoder/convlarge.0.3_150_deepscenario.py")
 
-    trajectory_scale = 100 # scale factor to use for the translation component
+    trajectory_scale = 20 # scale factor to use for the translation component
 
-    use_every_nth = 50 # every n'th image is used to create point cloud
+    use_every_nth = 25 # every n'th image is used to create point cloud
     start = 0 # index of the starting image
-    end = 201 # index of the last image, set None to include all images from start
+    end = 1 # index of the last image, set None to include all images from start
 
-    H_output = 2988 // 4 # numbers are the original sizes, needs to be integers
-    W_output = 5312 // 4
+    H_output = 2988  # numbers are the original sizes, needs to be integers
+    W_output = 5312
 
     # Parameters to define max/min depth and region of interest for point cloud backprojection
     min_d = 0
-    max_d = 60
+    max_d = 100
     roi = [
         int(H_output * 0.3),
-        H_output,
-        0,
-        W_output
+        int(H_output * 0.95),
+        int(W_output * 0.05),
+        int(W_output * 0.95)
     ] # leave empty to consider the whole image, origin is at top left corner
-    dropout = 0.5
+    dropout = 0.3
 
     # Construct the Config object for metric3d
     cfg = Config.fromfile(config_path)
@@ -77,7 +77,7 @@ def main():
     os.makedirs(osp.abspath(cfg.show_dir), exist_ok=True)
 
     save_image_dir = Path(cfg.show_dir, "raw_images")
-    save_pred_dir = Path(cfg.show_dir, "depth")
+    save_pred_dir = Path(cfg.show_dir, "depth") # predicted depth directory
     save_pcd_dir = Path(cfg.show_dir, "pcd") # point cloud directory
 
     os.makedirs(save_image_dir, exist_ok=True)
@@ -85,7 +85,7 @@ def main():
     os.makedirs(save_pcd_dir, exist_ok=True)
 
 
-    # Dump config (not implemented yet)
+    # Dump config (WIP)
 
     # Read in trajectories and image data (including path and intrinsics)
     trajectories = read_kitti_trajectory(trajectory_path)
@@ -100,7 +100,7 @@ def main():
         trajectories = trajectories[start:end]
         image_data = image_data[start:end]
 
-    print(f"Creating point cloud from {len(image_data)} images using every {use_every_nth}th image...")
+    print(f"Creating point cloud from {len(image_data)} image/s using every {use_every_nth}st/th image...")
 
     # Standardization values used by the authors, useful to just save image nicely
     mean = torch.tensor([123.675, 116.28, 103.53]).float()[:, None, None]
@@ -184,13 +184,12 @@ def main():
             image_to_backproject = image_to_backproject.reshape(-1,3)
             point_cloud["rgb"].append(image_to_backproject[mask])
 
-            print("DEBUG: done with one iteration!")
 
     # Save the reconstructed point cloud
     pcd_total = np.concatenate(point_cloud["pcd"], axis=0)
     rgb_total = np.concatenate(point_cloud["rgb"], axis=0)
 
-    save_point_cloud(pcd_total, rgb_total, filename = Path(save_pcd_dir, "cloud_scale500.ply"))
+    save_point_cloud(pcd_total, rgb_total, filename = Path(save_pcd_dir, file_name))
 
 
 

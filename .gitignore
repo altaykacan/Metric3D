@@ -9,3 +9,7 @@ weight/*
 # Don't share data :)
 data/wild_demo/*
 deepscenario/data/*
+
+# Do not track images saved when debugging
+debug.png
+debug.jpg
