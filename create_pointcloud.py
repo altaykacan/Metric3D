@@ -25,7 +25,7 @@ except:
 
 def main():
     # Set configuration variables
-    file_name = "test_original_version.ply"
+    file_name = "no_transform.ply"
 
     weigth_path = Path("./weight/convlarge_hourglass_0.3_150_step750k_v1.1.pth")
     trajectory_path = Path("/usr/stud/kaa/thesis/data_temp/deep_scenario/poses_dvso/01.txt")
@@ -33,7 +33,7 @@ def main():
     # Input image resizing (called crop) defined in the config file
     config_path = Path("./mono/configs/HourglassDecoder/convlarge.0.3_150_deepscenario.py")
 
-    trajectory_scale = 20 # scale factor to use for the translation component
+    trajectory_scale = 1 # scale factor to use for the translation component
 
     use_every_nth = 25 # every n'th image is used to create point cloud
     start = 0 # index of the starting image
@@ -157,7 +157,8 @@ def main():
             pcd = reconstruct_pcd(pred_depth, *intrinsics) # unpack the list with *
 
             # Compute mask to decide which points to show or not (WIP)
-            mask = compute_mask(pred_depth, roi, min_d, max_d, dropout)
+            # mask = compute_mask(pred_depth, roi, min_d, max_d, dropout)
+            mask = None
 
             # Transform point cloud to world coordinates
             pcd = transform_pcd_to_world(pcd, extrinsics, trajectory_scale)
@@ -178,10 +179,15 @@ def main():
                 pred_depth
             )
 
-            point_cloud["pcd"].append(pcd[mask])
+            if mask is not None:
+                pcd = pcd[mask]
+            point_cloud["pcd"].append(pcd)
+
             # Need to resize and flatten original rgb
             image_to_backproject = cv2.resize(rgb_origin, dsize=(H_output, W_output))
             image_to_backproject = image_to_backproject.reshape(-1,3)
+            if mask is not None:
+                image_to_backproject[mask]
             point_cloud["rgb"].append(image_to_backproject[mask])
 
 
