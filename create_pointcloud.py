@@ -25,33 +25,33 @@ except:
 
 def main():
     # Set configuration variables
-    file_name = "no_transform.ply"
+    file_name = "no_resize_in_backproject.ply"
 
     weigth_path = Path("./weight/convlarge_hourglass_0.3_150_step750k_v1.1.pth")
     trajectory_path = Path("/usr/stud/kaa/thesis/data_temp/deep_scenario/poses_dvso/01.txt")
     image_dir = Path("/usr/stud/kaa/thesis/data_temp/deep_scenario/sequences/01/image_2")
-    # Input image resizing (called crop) defined in the config file
-    config_path = Path("./mono/configs/HourglassDecoder/convlarge.0.3_150_deepscenario.py")
+    config_path = Path("./mono/configs/HourglassDecoder/convlarge.0.3_150_deepscenario.py") # input image resizing (called crop) defined in the config file
 
-    trajectory_scale = 1 # scale factor to use for the translation component
+    trajectory_scale = 10 # scale factor to use for the translation component
 
-    use_every_nth = 25 # every n'th image is used to create point cloud
+    use_every_nth = 50 # every n'th image is used to create point cloud
     start = 0 # index of the starting image
-    end = 1 # index of the last image, set None to include all images from start
+    end = None # index of the last image, set None to include all images from start
 
-    H_output = 2988  # numbers are the original sizes, needs to be integers
+    # (WIP)
+    H_output = 2988  # numbers are the original sizes, needs to be integers,
     W_output = 5312
 
-    # Parameters to define max/min depth and region of interest for point cloud backprojection
+    # Backprojection mask parameters
     min_d = 0
     max_d = 100
     roi = [
-        int(H_output * 0.3),
-        int(H_output * 0.95),
-        int(W_output * 0.05),
-        int(W_output * 0.95)
+        int(H_output * 0.3), # top border
+        int(H_output * 0.95), # bottom border
+        int(W_output * 0.05), # left border
+        int(W_output * 0.95) # right border
     ] # leave empty to consider the whole image, origin is at top left corner
-    dropout = 0.3
+    dropout = 0.9
 
     # Construct the Config object for metric3d
     cfg = Config.fromfile(config_path)
@@ -64,6 +64,7 @@ def main():
     cfg.load_from = str(weigth_path)
 
     # Load data info as dummy values and other relevant data from config
+    #(taken from Metric3d do_scalecano_test_with_custom_data())
     data_info = {}
     load_data_info('data_info', data_info=data_info)
     cfg.mldb_info = data_info
@@ -76,14 +77,13 @@ def main():
     # Create directories to show results
     os.makedirs(osp.abspath(cfg.show_dir), exist_ok=True)
 
-    save_image_dir = Path(cfg.show_dir, "raw_images")
+    save_image_dir = Path(cfg.show_dir, "images")
     save_pred_dir = Path(cfg.show_dir, "depth") # predicted depth directory
     save_pcd_dir = Path(cfg.show_dir, "pcd") # point cloud directory
 
     os.makedirs(save_image_dir, exist_ok=True)
     os.makedirs(save_pred_dir, exist_ok=True)
     os.makedirs(save_pcd_dir, exist_ok=True)
-
 
     # Dump config (WIP)
 
@@ -100,7 +100,8 @@ def main():
         trajectories = trajectories[start:end]
         image_data = image_data[start:end]
 
-    print(f"Creating point cloud from {len(image_data)} image/s using every {use_every_nth}st/th image...")
+    print(f"Number of images: {len(image_data)}")
+    print(f"Using every n'th image, n: {use_every_nth}")
 
     # Standardization values used by the authors, useful to just save image nicely
     mean = torch.tensor([123.675, 116.28, 103.53]).float()[:, None, None]
@@ -152,46 +153,77 @@ def main():
                 # ori_shape=[rgb_origin.shape[0], rgb_origin.shape[1]]
             )
 
-            # Create point cloud from depth map (in camera coordinates)
-            pred_depth = pred_depth.detach().cpu().numpy()
-            pcd = reconstruct_pcd(pred_depth, *intrinsics) # unpack the list with *
+            # Compute mask to decide which points to show or not, set None to ignore
+            pred_depth = pred_depth.detach().cpu().numpy() # need change device and type
+            mask = compute_mask(pred_depth, roi, min_d, max_d, dropout) # [num_points,]
 
-            # Compute mask to decide which points to show or not (WIP)
-            # mask = compute_mask(pred_depth, roi, min_d, max_d, dropout)
-            mask = None
+            # Append to buffers
+            pose_buffer.append(extrinsics)
+            mask_buffer.append(mask)
+            image_buffer.append(rgb_origin)
+            depth_buffer.append(pred_depth)
 
-            # Transform point cloud to world coordinates
-            pcd = transform_pcd_to_world(pcd, extrinsics, trajectory_scale)
-            # pcd = pcd.reshape(-1,3)
+            if len(pose_buffer) >= buffer_length:
+                extrinsics = pose_buffer[key_index]
+                mask = mask_buffer[key_index]
+                rgb_origin = image_buffer[key_index]
+                pred_depth[key_index]
 
-            # Save original image, depth prediction, and transformed point cloud
-            image_model_input = rgb_input.squeeze().cpu()
-            image_model_input = image_model_input * std + mean
-            image_model_input = image_model_input.permute(1,2,0).numpy().astype(np.uint8)
+                # Create point cloud from depth map (in camera coordinates)
+                pcd = reconstruct_pcd(pred_depth, *intrinsics) # unpack the list with *
 
-            plt.imsave(
-                Path(save_image_dir, current_image_data["filename"]),
-                image_model_input
-            )
+                # Transform point cloud to world coordinates, just flatten to igno
+                pcd = transform_pcd_to_world(pcd, extrinsics, trajectory_scale)
 
-            plt.imsave(
-                Path(save_pred_dir, current_image_data["filename"]),
-                pred_depth
-            )
+                # Save point cloud
+                if mask is not None:
+                    pcd = pcd[mask]
+                point_cloud["pcd"].append(pcd)
 
-            if mask is not None:
-                pcd = pcd[mask]
-            point_cloud["pcd"].append(pcd)
+                # Need to resize and flatten original rgb
+                # image_to_backproject = cv2.resize(rgb_origin, dsize=(H_output, W_output))
+                image_to_backproject = rgb_origin
+                image_to_backproject = image_to_backproject.reshape(-1,3)
+                if mask is not None:
+                    image_to_backproject = image_to_backproject[mask]
+                point_cloud["rgb"].append(image_to_backproject)
 
-            # Need to resize and flatten original rgb
-            image_to_backproject = cv2.resize(rgb_origin, dsize=(H_output, W_output))
-            image_to_backproject = image_to_backproject.reshape(-1,3)
-            if mask is not None:
-                image_to_backproject[mask]
-            point_cloud["rgb"].append(image_to_backproject[mask])
+                # Save used images/masks for debugging
+                image_model_input = rgb_input.squeeze().cpu()
+                image_model_input = image_model_input * std + mean
+                image_model_input = image_model_input.permute(1,2,0).numpy().astype(np.uint8)
+
+                plt.imsave(
+                    Path(save_image_dir, current_image_data["filename"].replace(".png","") + "_input.png"),
+                    image_model_input
+                )
+
+                plt.imsave(
+                    Path(save_pred_dir, current_image_data["filename"]),
+                    pred_depth
+                )
+
+                if mask is not None:
+                    # Need to reshape mask again to save it and do element-wise
+                    # multiplication with the original image
+                    mask_reshaped = mask.reshape(pred_depth.shape[0], pred_depth.shape[1])
+                    plt.imsave(
+                        Path(save_image_dir, current_image_data["filename"].replace(".png","") + "_mask.png"),
+                        mask_reshaped
+                    )
+                    plt.imsave(
+                        Path(save_image_dir, current_image_data["filename"].replace(".png","") + "_for_pcd.png"),
+                        rgb_origin * mask_reshaped[:,:,None] # element-wise multiplication with broadcasting
+                    )
+
+                # Move along buffer
+                del pose_buffer[0]
+                del mask_buffer[0]
+                del image_buffer[0]
+                del depth_buffer[0]
 
 
-    # Save the reconstructed point cloud
+    # Save the full reconstructed point cloud
     pcd_total = np.concatenate(point_cloud["pcd"], axis=0)
     rgb_total = np.concatenate(point_cloud["rgb"], axis=0)
 
