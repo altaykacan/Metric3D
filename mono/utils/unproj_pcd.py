@@ -90,6 +90,7 @@ def save_point_cloud(pcd, rgb, filename, binary=True):
     if binary is True:
         # Format into Numpy structured array
         vertices = []
+        print("Saving point cloud, iterating over every point...")
         for row_idx in tqdm(range(points_3d.shape[0])):
             cur_point = points_3d[row_idx]
             vertices.append(
@@ -175,11 +176,11 @@ def compute_mask(depth: np.ndarray, roi: typing.List, min_d: float, max_d: float
     Returns:
         torch.Tensor: The computed mask as a flattened array.
     """
-    mask = (depth > min_d) & (depth < max_d)
+    mask = np.logical_and((depth > min_d), (depth < max_d))
     if roi != []:
         mask[:roi[0], :] = False
         mask[roi[1]:, :] = False
-        mask[:, roi[2]] = False
+        mask[:, :roi[2]] = False
         mask[:, roi[3]:] = False
     if dropout > 0:
         mask = mask & (np.random.rand(*depth.shape) > dropout) # need to unpack shape which is a tuple
