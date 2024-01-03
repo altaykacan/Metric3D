@@ -25,20 +25,20 @@ except:
 
 def main():
     # Set configuration variables
-    file_name = "no_resize_in_backproject.ply"
+    file_name = "meeting_demo_metric3d.ply"
 
     weigth_path = Path("./weight/convlarge_hourglass_0.3_150_step750k_v1.1.pth")
     trajectory_path = Path("/usr/stud/kaa/thesis/data_temp/deep_scenario/poses_dvso/01.txt")
     image_dir = Path("/usr/stud/kaa/thesis/data_temp/deep_scenario/sequences/01/image_2")
     config_path = Path("./mono/configs/HourglassDecoder/convlarge.0.3_150_deepscenario.py") # input image resizing (called crop) defined in the config file
 
-    trajectory_scale = 10 # scale factor to use for the translation component
+    trajectory_scale = 500 # scale factor to use for the translation component
 
-    use_every_nth = 50 # every n'th image is used to create point cloud
+    use_every_nth = 25 # every n'th image is used to create point cloud
     start = 0 # index of the starting image
     end = None # index of the last image, set None to include all images from start
 
-    # (WIP)
+    # TODO use preprocessing functions to resize, crop, and compute new intrinsics
     H_output = 2988  # numbers are the original sizes, needs to be integers,
     W_output = 5312
 
@@ -46,10 +46,10 @@ def main():
     min_d = 0
     max_d = 100
     roi = [
-        int(H_output * 0.3), # top border
+        int(H_output * 0.4), # top border
         int(H_output * 0.95), # bottom border
-        int(W_output * 0.05), # left border
-        int(W_output * 0.95) # right border
+        int(W_output * 0.2), # left border
+        int(W_output * 0.8) # right border
     ] # leave empty to consider the whole image, origin is at top left corner
     dropout = 0.9
 
@@ -69,7 +69,7 @@ def main():
     load_data_info('data_info', data_info=data_info)
     cfg.mldb_info = data_info
 
-    normalize_scale = cfg.data_basic.depth_range[-1] # config param for model depth prediction range (?)
+    normalize_scale = cfg.data_basic.depth_range[-1] # config param for model depth prediction range? TODO figure out
 
     # Update check point info
     reset_ckpt_path(cfg.model, data_info)
@@ -85,7 +85,7 @@ def main():
     os.makedirs(save_pred_dir, exist_ok=True)
     os.makedirs(save_pcd_dir, exist_ok=True)
 
-    # Dump config (WIP)
+    # TODO dump config
 
     # Read in trajectories and image data (including path and intrinsics)
     trajectories = read_kitti_trajectory(trajectory_path)
@@ -118,7 +118,8 @@ def main():
     model, _, _, _ = load_ckpt(cfg.load_from, model, strict_match=False)
     model.eval()
 
-    # Setup buffer variables similar to MonoRec's implementation (WIP)
+    # TODO implement object detection here and figure out why exactly we need this buffer
+    # Setup buffer variables similar to MonoRec's implementation
     pose_buffer = []
     mask_buffer = []
     image_buffer = []

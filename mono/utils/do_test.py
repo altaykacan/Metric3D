@@ -23,6 +23,7 @@ def to_cuda(data: dict):
     return data
 
 def align_scale(pred: torch.tensor, target: torch.tensor):
+    """Used in get_prediction"""
     mask = target > 0
     if torch.sum(mask) > 10:
         scale = torch.median(target[mask]) / (torch.median(pred[mask]) + 1e-8)
@@ -32,6 +33,7 @@ def align_scale(pred: torch.tensor, target: torch.tensor):
     return pred_scaled, scale
 
 def align_scale_shift(pred: torch.tensor, target: torch.tensor):
+    """Used in do_scalecano_test_with_custom_data"""
     mask = target > 0
     target_mask = target[mask].cpu().numpy()
     pred_mask = pred[mask].cpu().numpy()
@@ -229,8 +231,9 @@ def transform_test_data_scalecano(rgb, intrinsic, data_basic):
     mean = torch.tensor([123.675, 116.28, 103.53]).float()[:, None, None]
     std = torch.tensor([58.395, 57.12, 57.375]).float()[:, None, None]
 
+    # Ignoring the second unnecessary color space transform
     # BGR to RGB
-    rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
+    # rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
 
     ori_h, ori_w, _ = rgb.shape
     ori_focal = (intrinsic[0] + intrinsic[1]) / 2
