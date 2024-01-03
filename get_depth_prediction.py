@@ -36,12 +36,12 @@ def main():
     min_d = 0
     max_d = 100
     roi = [
-        int(H_output * 0.4), # top border
-        int(H_output * 0.95), # bottom border
-        int(W_output * 0.2), # left border
-        int(W_output * 0.8) # right border
+        # int(H_output * 0.4), # top border
+        # int(H_output * 0.95), # bottom border
+        # int(W_output * 0.2), # left border
+        # int(W_output * 0.8) # right border
     ] # leave empty to consider the whole image, origin is at top left corner
-    dropout = 0.9
+    dropout = 0.0
 
     # Construct the Config object for metric3d
     cfg = Config.fromfile(config_path)
@@ -139,7 +139,9 @@ def main():
             pred_depth
         )
 
-        np.save(Path(save_pred_dir, current_image_data["filename"].replace(".png","") + "_array"), pred_depth)
+        # Save as npy object to use later
+        np.save(Path(save_pred_dir, current_image_data["filename"].replace(".png","")),
+                pred_depth)
 
         if mask is not None:
             # Need to reshape mask again to save it and do element-wise
@@ -149,6 +151,11 @@ def main():
                 Path(save_image_dir, current_image_data["filename"].replace(".png","") + "_mask.png"),
                 mask_reshaped
             )
+
+            # Save the depth after masking as npy object to use later
+            np.save(Path(save_pred_dir, current_image_data["filename"].replace(".png","") + "_masked"),
+                    mask_reshaped * pred_depth)
+
             plt.imsave(
                 Path(save_image_dir, current_image_data["filename"].replace(".png","") + "_for_pcd.png"),
                 rgb_origin * mask_reshaped[:,:,None] # element-wise multiplication with broadcasting

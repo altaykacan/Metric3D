@@ -32,7 +32,7 @@ def main():
     image_dir = Path("/usr/stud/kaa/thesis/data_temp/deep_scenario/sequences/01/image_2")
     config_path = Path("./mono/configs/HourglassDecoder/convlarge.0.3_150_deepscenario.py") # input image resizing (called crop) defined in the config file
 
-    trajectory_scale = 500 # scale factor to use for the translation component
+    trajectory_scale = 181.7594757080078 # scale factor to use for the translation component
 
     use_every_nth = 25 # every n'th image is used to create point cloud
     start = 0 # index of the starting image
@@ -59,7 +59,7 @@ def main():
     # Use config filename + timestamp as default show_dir if args.show_dir is None
     timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
     cfg.show_dir = str(Path('./show_dirs',
-                            "deep_scenario",
+                            "scale_alignment_pcd",
                             timestamp))
     cfg.load_from = str(weigth_path)
 
