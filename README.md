@@ -1,6 +1,8 @@
 # 🎓Master's Thesis Project Repo - Metric3D
 Modifying the repository to support zero-shot point cloud reconstruction when given camera settings and a trajectory from a SLAM system in the flavor of [MonoRec](https://github.com/Brummi/MonoRec) as a part of my thesis :)
 
+This repository is intended to be used as a submodule in another directory.
+
 
 # 🚀 MetricDepth (ICCV23) 🚀
 
@@ -14,7 +16,7 @@ Authors: [Wei Yin](https://yvanyin.net/)<sup>1*</sup>,
 [Chunhua Shen](https://cshen.github.io/)<sup>3</sup>
 
 ### [Arxiv](https://arxiv.org/abs/2307.10984) | [Video](https://www.youtube.com/playlist?list=PLEuyXJsWqUNd04nwfm9gFBw5FVbcaQPl3) | Hugging Face 🤗 (Comming Soon)
-[@JUGGHM](https://github.com/JUGGHM)<sup>1,5</sup>  will also maintain this project. 
+[@JUGGHM](https://github.com/JUGGHM)<sup>1,5</sup>  will also maintain this project.
 
 ### The Champion of [2nd Monocular Depth Estimation Challenge](https://jspenmar.github.io/MDEC) in CVPR 2023
 ### Zero-shot testing on NYU and KITTI, Comparable with SoTA Supervised methods
@@ -34,13 +36,13 @@ Existing monocular metric depth estimation methods can only handle a single came
 
 ## 🎩 Fully zero-shot state-of-the-art mono-depth
 
-### Highlights: The Champion 🏆 of [2nd Monocular Depth Estimation Challenge](https://jspenmar.github.io/MDEC) in CVPR 2023 
+### Highlights: The Champion 🏆 of [2nd Monocular Depth Estimation Challenge](https://jspenmar.github.io/MDEC) in CVPR 2023
 
 <div align=center>
 <img src="media/screenshots/challenge.PNG">
 </div>
 
-### Routing benchmarks 
+### Routing benchmarks
 
 WITHOUT re-training the models on target datasets, we obtain comparable performance against SoTA supervised methods Adabins and NewCRFs.
 
@@ -67,13 +69,13 @@ Metric3D can also provide scale information for DroidSLAM, help to solve the sca
 #### Bird Eyes' View (Left: Droid-SLAM (mono). Right: Droid-SLAM with Metric-3D)
 
 <div align=center>
-<img src="media/gifs/0028.gif"> 
+<img src="media/gifs/0028.gif">
 </div>
 
 #### Front View
 
 <div align=center>
-<img src="media/gifs/0028_fv.gif"> 
+<img src="media/gifs/0028_fv.gif">
 </div>
 
 #### KITTI odemetry evaluation (Translational RMS drift (t_rel, ↓) / Rotational RMS drift (r_rel, ↓))
@@ -94,7 +96,7 @@ Metric3D makes the mono-SLAM scale-aware, like stereo systems.
 videos - Bilibili (TODO)
 
 #### Estimated pose
-[2011_09_30_drive_0033](https://drive.google.com/file/d/1SMXWzLYrEdmBe6uYMR9ShtDXeFDewChv/view?usp=drive_link) / 
+[2011_09_30_drive_0033](https://drive.google.com/file/d/1SMXWzLYrEdmBe6uYMR9ShtDXeFDewChv/view?usp=drive_link) /
 [2011_09_30_drive_0034](https://drive.google.com/file/d/1ONU4GxpvTlgW0TjReF1R2i-WFxbbjQPG/view?usp=drive_link) /
 [2011_10_03_drive_0042](https://drive.google.com/file/d/19fweg6p1Q6TjJD2KlD7EMA_aV4FIeQUD/view?usp=drive_link)
 
@@ -159,15 +161,15 @@ dict(
 To generate such annotations, please refer to the "Inference" section.
 
 ### configs
-In ```mono/configs``` we provide different config setups. 
+In ```mono/configs``` we provide different config setups.
 
-Intrinsics of the canonical camera is set bellow: 
+Intrinsics of the canonical camera is set bellow:
 ```
     canonical_space = dict(
         focal_length=1000.0,
     ),
 ```
-where cx and cy is set to be half of the image size. You do not need to adjust the canonical focal length, otherwise the metric is not accurate. 
+where cx and cy is set to be half of the image size. You do not need to adjust the canonical focal length, otherwise the metric is not accurate.
 
 Inference settings are defined as
 ```
@@ -185,13 +187,13 @@ More models are on the way...
 
 ### Dataset Mode
 1. put the trained ckpt file ```model.pth``` in ```weight/```.
-2. generate data annotation by following the code ```data/gene_annos_kitti_demo.py```, which includes 'rgb', (required) 'intrinsic', (required) 'depth', (optional) 'depth_scale'. Note the 'depth_scale' is the scale factor for GT labels. e.g. to keep the precision, the kitti GT depths are scaled with 256. 
-3. change the 'test_data_path' in ```test_*.sh``` to the ```*.json``` path. 
+2. generate data annotation by following the code ```data/gene_annos_kitti_demo.py```, which includes 'rgb', (required) 'intrinsic', (required) 'depth', (optional) 'depth_scale'. Note the 'depth_scale' is the scale factor for GT labels. e.g. to keep the precision, the kitti GT depths are scaled with 256.
+3. change the 'test_data_path' in ```test_*.sh``` to the ```*.json``` path.
 4. run ```source test_kitti.sh``` or ```source test_nyu.sh```.
 
 ### In-the-Wild Mode
 1. put the trained ckpt file ```model.pth``` in ```weight/```.
-2. change the 'test_data_path' in ```test.sh``` to the image folder path. 
+2. change the 'test_data_path' in ```test.sh``` to the image folder path.
 3. run ```source test.sh```.
 Note: if you do not know the intrinsics, we will randomly set the intrinsic parameters. The problem is the predicted depth has no metric. However, if you know the paired focal length, please modify the following code in ```mono/utils/custom_data.py```. Set the 'intrinsic' with the format [fx, fy, cx, cy].
 ```
@@ -203,13 +205,13 @@ def load_data(path: str):
 
 ## ❓ Q & A
 ### Q1.1: Why depth maps look good but pointclouds are distorted?
-Because the focal length is not properly set! Please find a proper focal length by modifying codes [here](mono/utils/do_test.py#309) yourself.  
+Because the focal length is not properly set! Please find a proper focal length by modifying codes [here](mono/utils/do_test.py#309) yourself.
 
 ### Q1.2: Why depth maps look good but scales are not precise?
-If the intrinsics are correct, please try different **resolutions** for  ``` crop_size = (512, 1088) ``` in the config file. From our experience, you could try (544, 928), (768, 1088), (512, 992), (480, 1216), (1216, 1952), or some resolutions close to them as you like. Generally, larger resolutions are better for driving scenarios and smaller ones for indoors.  
+If the intrinsics are correct, please try different **resolutions** for  ``` crop_size = (512, 1088) ``` in the config file. From our experience, you could try (544, 928), (768, 1088), (512, 992), (480, 1216), (1216, 1952), or some resolutions close to them as you like. Generally, larger resolutions are better for driving scenarios and smaller ones for indoors.
 
 ### Q2: Why the pointclouds are too slow to be generated?
-Because the images are too large! Use smaller ones instead. 
+Because the images are too large! Use smaller ones instead.
 
 ### Q3: Why predicted depth maps are not satisfactory?
 First be sure all black padding regions at image boundaries are cropped out. Besides, metric 3D is not almighty. Some objects (chandeliers, drones...) / camera views (aerial view, bev...) do not occur frequently in the training datasets. We will going deeper into this and release more powerful solutions.
