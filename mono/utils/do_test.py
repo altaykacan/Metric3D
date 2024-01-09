@@ -178,6 +178,7 @@ def get_prediction_custom(
     if gt_depth is not None:
         pred_depth_scale, scale = align_scale(pred_depth, gt_depth)
     else:
+        # These are None in In-The-Wild mode
         pred_depth_scale = None
         scale = None
 

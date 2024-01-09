@@ -36,10 +36,6 @@ def main():
     min_d = 0
     max_d = 100
     roi = [
-        # int(H_output * 0.4), # top border
-        # int(H_output * 0.95), # bottom border
-        # int(W_output * 0.2), # left border
-        # int(W_output * 0.8) # right border
     ] # leave empty to consider the whole image, origin is at top left corner
     dropout = 0.0
 
@@ -61,7 +57,7 @@ def main():
 
     normalize_scale = cfg.data_basic.depth_range[-1] # config param for model depth prediction range? TODO figure out
 
-    # Update check point info
+    # Update checkpoint info
     reset_ckpt_path(cfg.model, data_info)
 
     # Create directories to show results

@@ -15,7 +15,7 @@ from mono.utils.do_test import get_prediction_custom, transform_test_data_scalec
 from mono.model.monodepth_model import get_configured_monodepth_model
 from mono.utils.running import load_ckpt
 from mono.utils.mldb import load_data_info, reset_ckpt_path
-from mono.utils.custom_data import load_data
+from mono.utils.custom_data import load_data, load_data_custom
 from mono.utils.trajectory import read_kitti_trajectory
 from mono.utils.unproj_pcd import reconstruct_pcd, transform_pcd_to_world, save_point_cloud, compute_mask
 try:
@@ -25,16 +25,16 @@ except:
 
 def main():
     # Set configuration variables
-    file_name = "meeting_demo_metric3d.ply"
+    file_name = "demo_metric3d_every_10_maxd_100_smaller_roi.ply"
 
-    weigth_path = Path("./weight/convlarge_hourglass_0.3_150_step750k_v1.1.pth")
-    trajectory_path = Path("/usr/stud/kaa/thesis/data_temp/deep_scenario/poses_dvso/01.txt")
+    weight_path = Path("./weight/convlarge_hourglass_0.3_150_step750k_v1.1.pth")
+    trajectory_path = Path("/usr/stud/kaa/thesis/data_temp/deep_scenario/poses/CleanedCustomKeyFrameTrajectory.txt") # hacky solution, need to fix ORBSLAM3 function TODO
     image_dir = Path("/usr/stud/kaa/thesis/data_temp/deep_scenario/sequences/01/image_2")
     config_path = Path("./mono/configs/HourglassDecoder/convlarge.0.3_150_deepscenario.py") # input image resizing (called crop) defined in the config file
 
-    trajectory_scale = 181.7594757080078 # scale factor to use for the translation component
+    trajectory_scale = 393.0966796875 # scale factor to use for the translation component
 
-    use_every_nth = 25 # every n'th image is used to create point cloud
+    use_every_nth = 10 # every n'th image is used to create point cloud
     start = 0 # index of the starting image
     end = None # index of the last image, set None to include all images from start
 
@@ -46,12 +46,12 @@ def main():
     min_d = 0
     max_d = 100
     roi = [
-        int(H_output * 0.4), # top border
+        int(H_output * 0.45), # top border
         int(H_output * 0.95), # bottom border
-        int(W_output * 0.2), # left border
-        int(W_output * 0.8) # right border
+        int(W_output * 0.3), # left border
+        int(W_output * 0.7) # right border
     ] # leave empty to consider the whole image, origin is at top left corner
-    dropout = 0.9
+    dropout = 0.95
 
     # Construct the Config object for metric3d
     cfg = Config.fromfile(config_path)
@@ -61,7 +61,7 @@ def main():
     cfg.show_dir = str(Path('./show_dirs',
                             "scale_alignment_pcd",
                             timestamp))
-    cfg.load_from = str(weigth_path)
+    cfg.load_from = str(weight_path)
 
     # Load data info as dummy values and other relevant data from config
     #(taken from Metric3d do_scalecano_test_with_custom_data())
@@ -88,8 +88,8 @@ def main():
     # TODO dump config
 
     # Read in trajectories and image data (including path and intrinsics)
-    trajectories = read_kitti_trajectory(trajectory_path)
-    image_data = load_data(str(image_dir)) # default implementation expects strings
+    trajectories, paths = read_kitti_trajectory(trajectory_path)
+    image_data = load_data_custom(image_dir, paths)
 
     assert len(image_data) == len(trajectories), "Expected the length of available trajectories and image data to be the same!"
 
@@ -139,6 +139,7 @@ def main():
             extrinsics = current_trajectory
 
             # Preprocess input for model and get prediction
+            #  TODO figure out what this label_scale_factor is
             rgb_input, cam_models_stacks, pad, label_scale_factor = transform_test_data_scalecano(rgb_origin, intrinsics, cfg.data_basic)
 
             pred_depth, _, _ = get_prediction_custom(

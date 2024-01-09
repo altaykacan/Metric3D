@@ -1,8 +1,10 @@
 import glob
 import os
 import json
+from pathlib import Path
+from typing import List, Dict, Union
+
 import cv2
-from typing import List, Dict
 
 def load_from_annos(anno_path):
     with open(anno_path, 'r') as f:
@@ -28,7 +30,7 @@ def load_from_annos(anno_path):
 
 def load_data(path: str):
     """
-    Load custom data from the specified path.
+    Load custom data from the specified directory.
 
     Args:
         path (str): The path to the directory containing the data.
@@ -43,6 +45,25 @@ def load_data(path: str):
     """
     rgbs = glob.glob(path + '/*.jpg') + glob.glob(path + '/*.png')
     rgbs = sorted(rgbs) # hacky solution to get file names, glob doesn't sort on it's own
+    data = [{'rgb':i, 'depth':None,
+             'intrinsic': [2779.9523856929486, 2779.9523856929486,  2655.5, 1493.5],
+             'filename':os.path.basename(i), 'folder': i.split('/')[-3]} for i in rgbs]
+    return data
+
+def load_data_custom(root: Union[Path, str], paths: List[Union[Path, str]]):
+    """Load the image data specified from the paths list"""
+    # Convert to strings if inputs are Path objects
+    if isinstance(paths[0], Path):
+        paths = [str(element) for element in paths]
+    if isinstance(root, Path):
+        root = str(root)
+
+    # Appending the trailing slash to the root path is necessary
+    if root[-1] != "/":
+        root += "/"
+
+    # Keeping this part the same as the original repo, by no means ideal
+    rgbs = [root + path for path in paths]
     data = [{'rgb':i, 'depth':None,
              'intrinsic': [2779.9523856929486, 2779.9523856929486,  2655.5, 1493.5],
              'filename':os.path.basename(i), 'folder': i.split('/')[-3]} for i in rgbs]
