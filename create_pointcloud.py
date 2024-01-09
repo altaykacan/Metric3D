@@ -25,7 +25,7 @@ except:
 
 def main():
     # Set configuration variables
-    file_name = "demo_metric3d_every_10_maxd_70_smaller_roi.ply"
+    file_name = "demo_metric3d_every_10_maxd_100_smaller_roi.ply"
 
     weight_path = Path("./weight/convlarge_hourglass_0.3_150_step750k_v1.1.pth")
     trajectory_path = Path("/usr/stud/kaa/thesis/data_temp/deep_scenario/poses/CleanedCustomKeyFrameTrajectory.txt") # hacky solution, need to fix ORBSLAM3 function TODO
@@ -44,14 +44,14 @@ def main():
 
     # Backprojection mask parameters
     min_d = 0
-    max_d = 70
+    max_d = 100
     roi = [
         int(H_output * 0.45), # top border
         int(H_output * 0.95), # bottom border
         int(W_output * 0.3), # left border
         int(W_output * 0.7) # right border
     ] # leave empty to consider the whole image, origin is at top left corner
-    dropout = 0.9
+    dropout = 0.95
 
     # Construct the Config object for metric3d
     cfg = Config.fromfile(config_path)
