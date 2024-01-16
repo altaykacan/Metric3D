@@ -170,7 +170,7 @@ def compute_mask(depth: np.ndarray, roi: typing.List, min_d: float, max_d: float
         dropout (float, optional): The dropout probability to randomly exclude points from the mask.
 
     Returns:
-        torch.Tensor: The computed mask as a flattened array.
+        mask (np.ndarray): The computed mask as a flattened array.
     """
     mask = np.logical_and((depth > min_d), (depth < max_d))
     if roi != []:
