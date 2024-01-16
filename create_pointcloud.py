@@ -169,7 +169,7 @@ def main():
                 extrinsics = pose_buffer[key_index]
                 mask = mask_buffer[key_index]
                 rgb_origin = image_buffer[key_index]
-                pred_depth[key_index]
+                pred_depth = depth_buffer[key_index]
 
                 # Create point cloud from depth map (in camera coordinates)
                 pcd = reconstruct_pcd(pred_depth, *intrinsics) # unpack the list with *
