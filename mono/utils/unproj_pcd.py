@@ -135,16 +135,12 @@ def transform_pcd_to_world(pcd:  np.ndarray, extrinsics: np.ndarray, scale_facto
     matrix. The flattened point cloud without the extra dimension is returned.
 
     Args:
-        pcd (np.ndarray): The point cloud in camera coordinates
-        with shape [H,W,3] where the last dimension stores the x-y-z coordinates
-
-        extrinsics (np.ndarray): The extrinsic matrix, 4x4
-        homogeneous transform to convert camera coordinates to world coordinates
-
+        pcd (np.ndarray): The point cloud in camera coordinates with shape [H,W,3] 
+                          where the last dimension stores the x-y-z coordinates
+        extrinsics (np.ndarray): The extrinsic matrix, 4x4 homogeneous transform
+                                 to convert camera coordinates to world coordinates
         scale_factor (float): The factor to multiply the translation components
-        of the extrinsic matrix, used to counter the scale ambiguity of monocular
-        trajectory estimation methods.
-
+                              of the extrinsic matrix
     Returns:
         transformed_pcd (np.ndarray): Flattened and transformed
         point cloud, has shape [num_points,3]
