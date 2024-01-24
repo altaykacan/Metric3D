@@ -151,7 +151,7 @@ def get_prediction_custom(
     ori_shape: list=[],
 ):
     """
-    Default get_prediction method modified to give a predefined output scale
+    Default get_prediction method modified to give a predefined output resolution
     such that it is easier to adjust how dense the point cloud construction
     is. The repo already has custom resizing/intrinsic adjustment for inference
     but the output is resized again to the original size.
