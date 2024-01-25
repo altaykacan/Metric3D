@@ -13,8 +13,6 @@ from mono.utils.mldb import load_data_info, reset_ckpt_path
 DEFAULT_WEIGHT_PATH = Path("./modules/depth/Metric3D/weight/convlarge_hourglass_0.3_150_step750k_v1.1.pth")
 DEFAULT_CONFIG_PATH = Path("./modules/depth/Metric3D/mono/configs/HourglassDecoder/convlarge.0.3_150_deepscenario.py") # input image resizing (called crop) defined in the config file
 
-# LOCAL CHANGE TEST
-
 def get_config(cfg_path: Path = DEFAULT_CONFIG_PATH, weight_path: Path = DEFAULT_WEIGHT_PATH):
     """Returns the config object specific for Metric3D"""
     cfg = Config.fromfile(cfg_path)
