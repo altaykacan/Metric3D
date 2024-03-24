@@ -25,16 +25,16 @@ except:
 
 def main():
     # Set configuration variables
-    file_name = "demo_metric3d_every_10_maxd_100_smaller_roi.ply"
+    file_name = "fixed_bug.ply"
 
     weight_path = Path("./weight/convlarge_hourglass_0.3_150_step750k_v1.1.pth")
     trajectory_path = Path("/usr/stud/kaa/thesis/data_temp/deep_scenario/poses/CleanedCustomKeyFrameTrajectory.txt") # hacky solution, need to fix ORBSLAM3 function TODO
     image_dir = Path("/usr/stud/kaa/thesis/data_temp/deep_scenario/sequences/01/image_2")
     config_path = Path("./mono/configs/HourglassDecoder/convlarge.0.3_150_deepscenario.py") # input image resizing (called crop) defined in the config file
 
-    trajectory_scale = 393.0966796875 # scale factor to use for the translation component
+    trajectory_scale = 448.803595976482 # scale factor to use for the translation component
 
-    use_every_nth = 10 # every n'th image is used to create point cloud
+    use_every_nth = 5 # every n'th image is used to create point cloud
     start = 0 # index of the starting image
     end = None # index of the last image, set None to include all images from start
 
@@ -44,12 +44,12 @@ def main():
 
     # Backprojection mask parameters
     min_d = 0
-    max_d = 100
+    max_d = 60
     roi = [
-        int(H_output * 0.45), # top border
+        int(H_output * 0.3), # top border
         int(H_output * 0.95), # bottom border
-        int(W_output * 0.3), # left border
-        int(W_output * 0.7) # right border
+        int(W_output * 0.2), # left border
+        int(W_output * 0.8) # right border
     ] # leave empty to consider the whole image, origin is at top left corner
     dropout = 0.95
 
