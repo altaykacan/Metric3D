@@ -14,6 +14,7 @@ def predict_depth(model, cfg, image: Union[Image.Image, np.ndarray], intrinsics:
     if isinstance(image, Image.Image):
         image = np.asarray(image)
 
+    # We get the intrinsics as the input, no need to use the mono/utils/custom_data.py like the authors suggest
     rgb_input, cam_models_stacks, pad, label_scale_factor = transform_test_data_scalecano(image, intrinsics, cfg.data_basic)
 
     pred_depth, _, _ = get_prediction_custom(
