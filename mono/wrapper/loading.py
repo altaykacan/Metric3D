@@ -10,7 +10,7 @@ from mono.model.monodepth_model import get_configured_monodepth_model
 from mono.utils.running import load_ckpt
 from mono.utils.mldb import load_data_info, reset_ckpt_path
 
-DEFAULT_WEIGHT_PATH = Path("./modules/depth/Metric3Dv2/weight/metric_depth_vit_large_800k.pth ")
+DEFAULT_WEIGHT_PATH = Path("./modules/depth/Metric3Dv2/weight/metric_depth_vit_large_800k.pth")
 DEFAULT_CONFIG_PATH = Path("./modules/depth/Metric3Dv2/mono/configs/HourglassDecoder/vit.raft5.large_custom.py") # input image resizing (called crop) defined in the config file
 
 def get_depth_config(cfg_path: Path = DEFAULT_CONFIG_PATH, weight_path: Path = DEFAULT_WEIGHT_PATH):

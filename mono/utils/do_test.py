@@ -179,7 +179,7 @@ def get_prediction_custom(
         pred_depth_scale = None
         scale = None
 
-    return pred_depth, pred_depth_scale, scale
+    return pred_depth, pred_depth_scale, scale, output_dict
 
 def get_prediction(
     model: torch.nn.Module,
