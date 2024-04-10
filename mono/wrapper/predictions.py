@@ -1,5 +1,6 @@
 from typing import Union
 
+import torch
 import numpy as np
 from PIL import Image
 
@@ -33,11 +34,14 @@ def predict_depth(model, cfg, image: Union[Image.Image, np.ndarray], intrinsics:
     if predict_normals:
         pred_normal = output_dict['normal_out_list'][0][:, :3, :, :]
         H, W = pred_normal.shape[2:]
-        pred_normal = pred_normal[:, :, pad[0]:H-pad[1], pad[2]:W-pad[3]]
+        pred_normal = pred_normal[:, :, pad[0]:H-pad[1], pad[2]:W-pad[3]] # size still doesn't match initial image dimensions
+
+        # Need to interpolate and re-normalize the normal map
+        resize_shape = [image.shape[0], image.shape[1]]
+        pred_normal = torch.nn.functional.interpolate(pred_normal, resize_shape, mode='bilinear') # to desired size
+        pred_normal = pred_normal / torch.linalg.norm(pred_normal, dim=1, keepdims=True, ord=2) # pred_normal is (N, C, H, W), we need to normalize the coordinates (dim=1)
 
         pred_normal = pred_normal.squeeze()
-        if pred_normal.size(0) == 3:
-            pred_normal = pred_normal.permute(1,2,0)
 
         return pred_depth, pred_normal
 
